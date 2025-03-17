@@ -12,66 +12,52 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
-const wagmi_1 = require("wagmi");
-const core_1 = require("@wagmi/core");
-const Goldiswap_json_1 = __importDefault(require("./abis/Goldiswap.json"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const port = 3000;
+const port = process.env.API_PORT;
 app.use(express_1.default.json());
-const BerachainMainnet = {
-    id: 80094,
-    name: "Berachain",
-    nativeCurrency: {
-        name: "BERA",
-        symbol: "BERA",
-        decimals: 18
-    },
-    rpcUrls: {
-        default: {
-            http: ["https://rpc.berachain.com/"],
-        },
-        public: {
-            http: ["https://rpc.berachain.com/"],
-        }
-    }
+let chartData = { locksDaily: [], locksHourly: [] };
+const setData = (data) => {
+    chartData = data;
+    return true;
 };
-exports.config = (0, wagmi_1.createConfig)({
-    chains: [BerachainMainnet],
-    ssr: true,
-    transports: {
-        [BerachainMainnet.id]: (0, wagmi_1.http)()
-    }
-});
-const GOLDISWAP_ADDRESS = '';
-app.get("/locksweekly", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('locksweely api request received');
-    const fslResult = yield (0, core_1.readContract)(exports.config, {
-        address: GOLDISWAP_ADDRESS,
-        abi: Goldiswap_json_1.default.abi,
-        functionName: "fsl",
-        args: []
-    });
-    const pslResult = yield (0, core_1.readContract)(exports.config, {
-        address: GOLDISWAP_ADDRESS,
-        abi: Goldiswap_json_1.default.abi,
-        functionName: "psl",
-        args: []
-    });
-    const supplyResult = yield (0, core_1.readContract)(exports.config, {
-        address: GOLDISWAP_ADDRESS,
-        abi: Goldiswap_json_1.default.abi,
-        functionName: "totalSupply",
-        args: []
-    });
-    const locksWeeklyArray = [];
+app.get("/locksdaily", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('locksdaily api request received');
     const jsonResponse = {
-        locksWeekly: locksWeeklyArray
+        locksDaily: chartData.locksDaily
     };
-    console.log(jsonResponse);
     res.json(jsonResponse);
 }));
+app.get("/lockshourly", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('lockshourly api request received');
+    const jsonResponse = {
+        locksHourly: chartData.locksHourly
+    };
+    res.json(jsonResponse);
+}));
+app.post('/updater', (req, res) => {
+    const { data, password } = req.body;
+    console.log('updater request', data, password);
+    if (!data || typeof data !== 'object') {
+        console.log('invalid data format');
+        res.status(400).json({ message: "invalid data format" });
+    }
+    else if (password !== process.env.PASSWORD) {
+        console.log('unauthorized');
+        res.status(401).json({ message: "unauthorized" });
+    }
+    else {
+        const success = setData(data);
+        if (success) {
+            console.log('updated successfully');
+            res.json({ message: "updated successfully" });
+        }
+        else {
+            console.log('error updating');
+            res.status(400).json({ message: "error updating" });
+        }
+    }
+});
 app.listen(port, () => console.log(`Goldilocks Chart API is running on http://localhost:${port}`));
