@@ -2,9 +2,11 @@ import axios from "axios"
 import { CronJob } from "cron"
 import dotenv from "dotenv"
 import { createConfig, http } from "wagmi"
-import { formatEther, type Chain } from "viem"
+import { parseEther, formatEther, type Chain } from "viem"
 import { getPublicClient, readContract } from "@wagmi/core"
 import goldiswapABI from './abis/Goldiswap.json'
+import quoterABI from './abis/QuoterV2.json'
+import vaultABI from './abis/Goldivault4626.json'
 
 dotenv.config()
 const PASSWORD = process.env.PASSWORD
@@ -36,6 +38,10 @@ export const config = createConfig({
 })
 
 const GOLDISWAP_ADDRESS = '0xb7E448E5677D212B8C8Da7D6312E8Afc49800466'
+const RUSD_ADDRESS = '0x09D4214C03D01F49544C0448DBE3A27f768F2b34'
+const RUSDOT_ADDRESS = '0x4A8B5283E053A8B118EaDc4981e8Ec8659995652'
+const RUSDVAULT_ADDRESS = '0x8f65453BF050233d3BD6a08A5Eb53C1fD73312EC'
+const QUOTER_ADDRESS = '0x644C8D6E501f7C994B74F5ceA96abe65d0BA662B'
 const DAILY_SECONDS = 86400
 const DAILY_BLOCKS = 28800
 const DAILY_LOOPS = 7
@@ -53,6 +59,65 @@ const marketPrice = (fsl: number, psl: number, supply: number): number => {
   return floorPrice(fsl, supply) + (psl / supply) * ((psl + fsl) / fsl) ** 6
 }
 
+const getRusdYtArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
+  const client = getPublicClient(config)
+  const blockResult: any = await client.getBlock()
+  const currentBlock = parseFloat(blockResult.number)
+  const currentTimestamp = parseFloat(blockResult.timestamp)
+  console.log('block:', currentBlock, "timestamp:", currentTimestamp)
+
+  const rusdytTempArray: any[] = []
+  let incTimestamp = currentTimestamp
+  let j = 0
+  for(let i = currentBlock; i > (currentBlock - (loops * blocks)); i -= blocks) {
+    const buyingOTQuoteResultRusd: any = await readContract(config, {
+      address: QUOTER_ADDRESS,
+      abi: quoterABI.abi,
+      functionName: "quoteExactOutputSingle",
+      args: [
+        [
+          RUSD_ADDRESS,
+          RUSDOT_ADDRESS,
+          parseEther(`1`),
+          500,
+          0
+        ]
+      ],
+      blockNumber: i as unknown as bigint
+    })
+    const endTimeResultRusd: any = await readContract(config, {
+      address: RUSDVAULT_ADDRESS,
+      abi: vaultABI.abi,
+      functionName: "endTime",
+      args: [],
+      blockNumber: i as unknown as bigint
+    })
+    const buyingOTPriceRusd = parseFloat(formatEther(buyingOTQuoteResultRusd[0] as unknown as bigint))
+    const timeDifferenceRusd = parseFloat(endTimeResultRusd) * 1000 - Date.now()
+    const fixedDaysDifferenceRusd = timeDifferenceRusd / (1000 * 60 * 60 * 24)
+    const daysTilRusd = parseFloat(fixedDaysDifferenceRusd.toFixed(2)) + j
+    const fixedAprResponseRusd = (1 - buyingOTPriceRusd) * 100 * (365 / daysTilRusd)
+    const ytPriceRusd = 1 - buyingOTPriceRusd
+
+    const rusdytTempEntry = {
+      timestamp: incTimestamp,
+      block: i,
+      daysTil: daysTilRusd,
+      ytPrice: ytPriceRusd,
+      fixedApr: fixedAprResponseRusd
+    }
+    rusdytTempArray.push(rusdytTempEntry)
+    console.log(rusdytTempEntry)
+
+    incTimestamp -= seconds
+    j += 1
+    await sleepPlz()
+  }
+
+  console.log(rusdytTempArray)
+  return rusdytTempArray
+}
+
 const getLocksArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
   const client = getPublicClient(config)
   const blockResult: any = await client.getBlock()
@@ -60,7 +125,7 @@ const getLocksArray = async (loops: number, blocks: number, seconds: number): Pr
   const currentTimestamp = parseFloat(blockResult.timestamp)
   console.log('block:', currentBlock, "timestamp:", currentTimestamp)
   
-  const locksDailyArray: any[] = []
+  const locksTempArray: any[] = []
   let incTimestamp = currentTimestamp
   for(let i = currentBlock; i > (currentBlock - (loops * blocks)); i -= blocks) {
     const fslResult: any = await readContract(config, {
@@ -90,7 +155,7 @@ const getLocksArray = async (loops: number, blocks: number, seconds: number): Pr
     const floor = floorPrice(fsl, supply)
     const market = marketPrice(fsl, psl, supply)
 
-    const locksDailyEntry = {
+    const locksTempEntry = {
       timestamp: incTimestamp,
       block: i,
       fsl,
@@ -99,15 +164,15 @@ const getLocksArray = async (loops: number, blocks: number, seconds: number): Pr
       floor,
       market
     }
-    locksDailyArray.push(locksDailyEntry)
-    console.log(locksDailyEntry)
+    locksTempArray.push(locksTempEntry)
+    console.log(locksTempEntry)
 
     incTimestamp -= seconds
     await sleepPlz()
   }
 
-  console.log(locksDailyArray)
-  return locksDailyArray
+  console.log(locksTempArray)
+  return locksTempArray
 }
 
 const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
@@ -115,7 +180,8 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
     const timestamp = new Date().toISOString()
     const dataToPost = { 
       locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
-      locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS)
+      locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
+      rusdDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS)
     }
     const response = await axios.post(`http://localhost:${process.env.API_PORT}/updater`, {
       timestamp,

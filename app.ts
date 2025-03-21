@@ -9,9 +9,14 @@ app.use(express.json())
 type ChartData = {
   locksDaily: any[];
   locksHourly: any[];
+  rusdytDaily: any[];
 }
 
-let chartData: ChartData = { locksDaily: [], locksHourly: [] }
+let chartData: ChartData = {
+  locksDaily: [],
+  locksHourly: [],
+  rusdytDaily: []
+}
 
 const setData = (data: any): boolean => {
   chartData = data
@@ -32,6 +37,15 @@ app.get("/lockshourly", async (req: Request, res: Response) => {
 
   const jsonResponse = {
     locksHourly: chartData.locksHourly
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/rusdytdaily", async (req: Request, res: Response) => {
+  console.log('rusdytdaily api request received')
+
+  const jsonResponse = {
+    rusdytDaily: chartData.rusdytDaily
   }
   res.json(jsonResponse)
 })
