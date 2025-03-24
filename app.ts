@@ -10,12 +10,14 @@ type ChartData = {
   locksDaily: any[];
   locksHourly: any[];
   rusdytDaily: any[];
+  rusdytHourly: any[];
 }
 
 let chartData: ChartData = {
   locksDaily: [],
   locksHourly: [],
-  rusdytDaily: []
+  rusdytDaily: [],
+  rusdytHourly: []
 }
 
 const setData = (data: any): boolean => {
@@ -46,6 +48,15 @@ app.get("/rusdytdaily", async (req: Request, res: Response) => {
 
   const jsonResponse = {
     rusdytDaily: chartData.rusdytDaily
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/rusdythourly", async (req: Request, res: Response) => {
+  console.log('rusdythourly api request received')
+
+  const jsonResponse = {
+    rusdytHourly: chartData.rusdytHourly
   }
   res.json(jsonResponse)
 })

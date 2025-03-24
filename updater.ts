@@ -59,7 +59,7 @@ const marketPrice = (fsl: number, psl: number, supply: number): number => {
   return floorPrice(fsl, supply) + (psl / supply) * ((psl + fsl) / fsl) ** 6
 }
 
-const getRusdYtArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
+const getRusdYtArray = async (loops: number, blocks: number, seconds: number, daysTilInc: number): Promise<any> => {
   const client = getPublicClient(config)
   const blockResult: any = await client.getBlock()
   const currentBlock = parseFloat(blockResult.number)
@@ -110,13 +110,19 @@ const getRusdYtArray = async (loops: number, blocks: number, seconds: number): P
     console.log(rusdytTempEntry)
 
     incTimestamp -= seconds
-    j += 1
+    j += daysTilInc
     await sleepPlz()
   }
 
   console.log(rusdytTempArray)
   return rusdytTempArray
 }
+
+const test = async () => {
+  await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24);
+}
+
+test()
 
 const getLocksArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
   const client = getPublicClient(config)
@@ -181,7 +187,8 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
     const dataToPost = { 
       locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
       locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
-      rusdDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS)
+      rusdytDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS, 1),
+      rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24)
     }
     const response = await axios.post(`http://localhost:${process.env.API_PORT}/updater`, {
       timestamp,
@@ -195,4 +202,4 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
   }
 })
 
-job.start()
+// job.start()
