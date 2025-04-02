@@ -118,12 +118,6 @@ const getRusdYtArray = async (loops: number, blocks: number, seconds: number, da
   return rusdytTempArray
 }
 
-const test = async () => {
-  await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24);
-}
-
-test()
-
 const getLocksArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
   const client = getPublicClient(config)
   const blockResult: any = await client.getBlock()
@@ -202,4 +196,4 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
   }
 })
 
-// job.start()
+job.start()
