@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import axios from "axios"
 import { CronJob } from "cron"
 import dotenv from "dotenv"
@@ -10,6 +11,9 @@ import vaultABI from './abis/Goldivault4626.json'
 
 dotenv.config()
 const PASSWORD = process.env.PASSWORD
+if(!PASSWORD) {
+  throw new Error('password not set')
+}
 
 const BerachainMainnet = {
   id: 80094,
@@ -184,10 +188,14 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
       rusdytDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS, 1),
       rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24)
     }
+    const payload = JSON.stringify({ timestamp, data: dataToPost })
+    const signature = crypto
+      .createHmac('sha256', PASSWORD)
+      .update(payload)
+      .digest('hex')
     const response = await axios.post(`http://localhost:${process.env.API_PORT}/updater`, {
-      timestamp,
-      data: dataToPost,
-      password: PASSWORD
+      payload,
+      signature
     })
     console.log('data posted successfully:', response.data)
   }

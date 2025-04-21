@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import dotenv from "dotenv"
 import express, { Request, Response } from "express"
 
@@ -5,6 +6,10 @@ dotenv.config()
 const app = express()
 const port = process.env.API_PORT
 app.use(express.json())
+const PASSWORD = process.env.PASSWORD
+if(!PASSWORD) {
+  throw new Error('password not set')
+}
 
 type ChartData = {
   locksDaily: any[];
@@ -62,27 +67,39 @@ app.get("/rusdythourly", async (req: Request, res: Response) => {
 })
 
 app.post('/updater', (req: Request, res: Response) => {
-  const { data, password } = req.body
-  console.log('updater request', data, password)
+  const { payload, signature } = req.body
+  console.log('updater request', payload, signature)
 
-  if(!data || typeof data !== 'object') {
-    console.log('invalid data format')
-    res.status(400).json({ message: "invalid data format"})
+  if(!payload || !signature) {
+    console.log('missing payload or signature')
+    res.status(400).json({ message: "bad request"})
+    return
   }
-  else if(password !== process.env.PASSWORD) {
-    console.log('unauthorized')
-    res.status(401).json({ message: "unauthorized"})
+
+  const expectedSig = crypto
+    .createHmac('sha256', PASSWORD)
+    .update(payload)
+    .digest('hex')
+  if(expectedSig !== signature) {
+    console.log('invalid signature')
+    res.status(401).json({ message: "unauthorized" })
+    return
+  }
+
+  const { data } = JSON.parse(payload)
+  if (!data || typeof data !== 'object') {
+    res.status(400).json({ message: "invalid data format" })
+    return
+  }
+
+  const success = setData(data)
+  if(success) {
+    console.log('updated successfully')
+    res.json({ message: "updated successfully"})
   }
   else {
-    const success = setData(data)
-    if(success) {
-      console.log('updated successfully')
-      res.json({ message: "updated successfully"})
-    }
-    else {
-      console.log('error updating')
-      res.status(400).json({ message: "error updating"})
-    }
+    console.log('error updating')
+    res.status(400).json({ message: "error updating"})
   }
 })
 
