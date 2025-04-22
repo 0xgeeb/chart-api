@@ -52,6 +52,9 @@ const DAILY_LOOPS = 7
 const HOURLY_SECONDS = 3600
 const HOURLY_BLOCKS = 1200
 const HOURLY_LOOPS = 7
+const WEEKLY_SECONDS = 604800
+const WEEKLY_BLOCKS = 201600
+const WEEKLY_LOOPS = 7
 
 const sleepPlz = (milliseconds: number = 400) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -179,12 +182,13 @@ const getLocksArray = async (loops: number, blocks: number, seconds: number): Pr
   return locksTempArray
 }
 
-const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
+const job = new CronJob('0 */1 * * * *', async () => { // Every 5 minutes
   try {
     const timestamp = new Date().toISOString()
     const dataToPost = { 
-      locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
       locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
+      locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
+      locksWeekly: await getLocksArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS),
       rusdytDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS, 1),
       rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24)
     }

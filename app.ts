@@ -12,15 +12,17 @@ if(!PASSWORD) {
 }
 
 type ChartData = {
-  locksDaily: any[];
   locksHourly: any[];
+  locksDaily: any[];
+  locksWeekly: any[];
   rusdytDaily: any[];
   rusdytHourly: any[];
 }
 
 let chartData: ChartData = {
-  locksDaily: [],
   locksHourly: [],
+  locksDaily: [],
+  locksWeekly: [],
   rusdytDaily: [],
   rusdytHourly: []
 }
@@ -30,20 +32,13 @@ const setData = (data: any): boolean => {
   return true
 }
 
-app.get("/locksdaily", async (req: Request, res: Response) => {
-  console.log('locksdaily api request received')
-  
-  const jsonResponse = {
-    locksDaily: chartData.locksDaily
-  }
-  res.json(jsonResponse)
-})
-
-app.get("/lockshourly", async (req: Request, res: Response) => {
-  console.log('lockshourly api request received')
+app.get("/lockschartdata", async (req: Request, res: Response) => {
+  console.log('lockschartdata api request received')
 
   const jsonResponse = {
-    locksHourly: chartData.locksHourly
+    locksHourly: chartData.locksHourly,
+    locksDaily: chartData.locksDaily,
+    locksWeekly: chartData.locksWeekly
   }
   res.json(jsonResponse)
 })
