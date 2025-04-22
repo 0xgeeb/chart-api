@@ -182,7 +182,7 @@ const getLocksArray = async (loops: number, blocks: number, seconds: number): Pr
   return locksTempArray
 }
 
-const job = new CronJob('0 */1 * * * *', async () => { // Every 5 minutes
+const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
   try {
     const timestamp = new Date().toISOString()
     const dataToPost = { 
