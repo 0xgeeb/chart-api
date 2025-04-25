@@ -189,8 +189,9 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
       locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
       locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
       locksWeekly: await getLocksArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS),
+      rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24),
       rusdytDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS, 1),
-      rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24)
+      rusdytWeekly: await getRusdYtArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS, 7)
     }
     const payload = JSON.stringify({ timestamp, data: dataToPost })
     const signature = crypto
