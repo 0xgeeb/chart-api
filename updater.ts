@@ -3,7 +3,7 @@ import axios from "axios"
 import { CronJob } from "cron"
 import dotenv from "dotenv"
 import { createConfig, http } from "wagmi"
-import { parseEther, formatEther, type Chain } from "viem"
+import { parseEther, formatEther, parseUnits, formatUnits, type Chain } from "viem"
 import { getPublicClient, readContract } from "@wagmi/core"
 import goldiswapABI from './abis/Goldiswap.json'
 import quoterABI from './abis/QuoterV2.json'
@@ -42,10 +42,16 @@ export const config = createConfig({
 })
 
 const GOLDISWAP_ADDRESS = '0xb7E448E5677D212B8C8Da7D6312E8Afc49800466'
+const QUOTER_ADDRESS = '0x644C8D6E501f7C994B74F5ceA96abe65d0BA662B'
 const RUSD_ADDRESS = '0x09D4214C03D01F49544C0448DBE3A27f768F2b34'
 const RUSDOT_ADDRESS = '0x4A8B5283E053A8B118EaDc4981e8Ec8659995652'
 const RUSDVAULT_ADDRESS = '0x8f65453BF050233d3BD6a08A5Eb53C1fD73312EC'
-const QUOTER_ADDRESS = '0x644C8D6E501f7C994B74F5ceA96abe65d0BA662B'
+const UNIBTC_ADDRESS = '0xC3827A4BC8224ee2D116637023b124CED6db6e90'
+const UNIBTCOT_ADDRESS = '0xE771779B350d2cC291E9461387d7f41765a7cB8b'
+const UNIBTCVAULT_ADDRESS = '0x8742DB52a4EAEFE88bE5D3431980E221aaAA1EE3'
+const RSETH_ADDRESS = '0x4186BFC76E2E237523CBC30FD220FE055156b41F'
+const RSETHOT_ADDRESS = '0xB1195a6cdB7ef8fB22671bd8321727dBB6DDDe03'
+const RSETHVAULT_ADDRESS = '0xE4dC8142CEd52C547384032e43379b0514341c22'
 const DAILY_SECONDS = 86400
 const DAILY_BLOCKS = 28800
 const DAILY_LOOPS = 7
@@ -66,63 +72,72 @@ const marketPrice = (fsl: number, psl: number, supply: number): number => {
   return floorPrice(fsl, supply) + (psl / supply) * ((psl + fsl) / fsl) ** 6
 }
 
-const getRusdYtArray = async (loops: number, blocks: number, seconds: number, daysTilInc: number): Promise<any> => {
+const getYtArray = async (
+  loops: number,
+  blocks: number,
+  seconds: number,
+  daysTilInc: number,
+  dtAddy: string,
+  otAddy: string,
+  vaultAddy: string,
+  eighteenDecimals: boolean
+): Promise<any> => {
   const client = getPublicClient(config)
   const blockResult: any = await client.getBlock()
   const currentBlock = parseFloat(blockResult.number)
   const currentTimestamp = parseFloat(blockResult.timestamp)
   console.log('block:', currentBlock, "timestamp:", currentTimestamp)
 
-  const rusdytTempArray: any[] = []
+  const ytTempArray: any[] = []
   let incTimestamp = currentTimestamp
   let j = 0
   for(let i = currentBlock; i > (currentBlock - (loops * blocks)); i -= blocks) {
-    const buyingOTQuoteResultRusd: any = await readContract(config, {
+    const buyingOTQuoteResult: any = await readContract(config, {
       address: QUOTER_ADDRESS,
       abi: quoterABI.abi,
       functionName: "quoteExactOutputSingle",
       args: [
         [
-          RUSD_ADDRESS,
-          RUSDOT_ADDRESS,
-          parseEther(`1`),
+          dtAddy,
+          otAddy,
+          eighteenDecimals ? parseEther(`1`) : parseUnits(`1`, 8),
           500,
           0
         ]
       ],
       blockNumber: i as unknown as bigint
     })
-    const endTimeResultRusd: any = await readContract(config, {
-      address: RUSDVAULT_ADDRESS,
+    const endTimeResult: any = await readContract(config, {
+      address: vaultAddy as `0x${string}`,
       abi: vaultABI.abi,
       functionName: "endTime",
       args: [],
       blockNumber: i as unknown as bigint
     })
-    const buyingOTPriceRusd = parseFloat(formatEther(buyingOTQuoteResultRusd[0] as unknown as bigint))
-    const timeDifferenceRusd = parseFloat(endTimeResultRusd) * 1000 - Date.now()
-    const fixedDaysDifferenceRusd = timeDifferenceRusd / (1000 * 60 * 60 * 24)
-    const daysTilRusd = parseFloat(fixedDaysDifferenceRusd.toFixed(2)) + j
-    const fixedAprResponseRusd = (1 - buyingOTPriceRusd) * 100 * (365 / daysTilRusd)
-    const ytPriceRusd = 1 - buyingOTPriceRusd
+    const buyingOTPrice = eighteenDecimals ? parseFloat(formatEther(buyingOTQuoteResult[0] as unknown as bigint)) : parseFloat(formatUnits(buyingOTQuoteResult[0] as unknown as bigint, 8))
+    const timeDifference = parseFloat(endTimeResult) * 1000 - Date.now()
+    const fixedDaysDifference = timeDifference / (1000 * 60 * 60 * 24)
+    const daysTil = parseFloat(fixedDaysDifference.toFixed(2)) + j
+    const fixedAprResponse = (1 - buyingOTPrice) * 100 * (365 / daysTil)
+    const ytPrice = 1 - buyingOTPrice
 
-    const rusdytTempEntry = {
+    const ytTempEntry = {
       timestamp: incTimestamp,
       block: i,
-      daysTil: daysTilRusd,
-      ytPrice: ytPriceRusd,
-      fixedApr: fixedAprResponseRusd
+      daysTil: daysTil,
+      ytPrice: ytPrice,
+      fixedApr: fixedAprResponse
     }
-    rusdytTempArray.push(rusdytTempEntry)
-    console.log(rusdytTempEntry)
+    ytTempArray.push(ytTempEntry)
+    console.log(ytTempEntry)
 
     incTimestamp -= seconds
     j += daysTilInc
     await sleepPlz()
   }
 
-  console.log(rusdytTempArray)
-  return rusdytTempArray
+  console.log(ytTempArray)
+  return ytTempArray
 }
 
 const getLocksArray = async (loops: number, blocks: number, seconds: number): Promise<any> => {
@@ -189,9 +204,96 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
       locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
       locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
       locksWeekly: await getLocksArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS),
-      rusdytHourly: await getRusdYtArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS, 1/24),
-      rusdytDaily: await getRusdYtArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS, 1),
-      rusdytWeekly: await getRusdYtArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS, 7)
+      rusdytHourly: await getYtArray(
+        HOURLY_LOOPS,
+        HOURLY_BLOCKS,
+        HOURLY_SECONDS,
+        1/24,
+        RUSD_ADDRESS,
+        RUSDOT_ADDRESS,
+        RUSDVAULT_ADDRESS,
+        true
+      ),
+      rusdytDaily: await getYtArray(
+        DAILY_LOOPS,
+        DAILY_BLOCKS,
+        DAILY_SECONDS,
+        1,
+        RUSD_ADDRESS,
+        RUSDOT_ADDRESS,
+        RUSDVAULT_ADDRESS,
+        true
+      ),
+      rusdytWeekly: await getYtArray(
+        WEEKLY_LOOPS,
+        WEEKLY_BLOCKS,
+        WEEKLY_SECONDS,
+        7,
+        RUSD_ADDRESS,
+        RUSDOT_ADDRESS,
+        RUSDVAULT_ADDRESS,
+        true
+      ),
+      rsethytHourly: await getYtArray(
+        HOURLY_LOOPS,
+        HOURLY_BLOCKS,
+        HOURLY_SECONDS,
+        1/24,
+        RSETH_ADDRESS,
+        RSETHOT_ADDRESS,
+        RSETHVAULT_ADDRESS,
+        true
+      ),
+      rsethytDaily: await getYtArray(
+        DAILY_LOOPS,
+        DAILY_BLOCKS,
+        DAILY_SECONDS,
+        1,
+        RSETH_ADDRESS,
+        RSETHOT_ADDRESS,
+        RSETHVAULT_ADDRESS,
+        true
+      ),
+      rsethytWeekly: await getYtArray(
+        WEEKLY_LOOPS,
+        WEEKLY_BLOCKS,
+        WEEKLY_SECONDS,
+        7,
+        RSETH_ADDRESS,
+        RSETHOT_ADDRESS,
+        RSETHVAULT_ADDRESS,
+        true
+      ),
+      unibtcytHourly: await getYtArray(
+        HOURLY_LOOPS,
+        HOURLY_BLOCKS,
+        HOURLY_SECONDS,
+        1/24,
+        UNIBTC_ADDRESS,
+        UNIBTCOT_ADDRESS,
+        UNIBTCVAULT_ADDRESS,
+        false
+      ),
+      unibtcytDaily: await getYtArray(
+        DAILY_LOOPS,
+        DAILY_BLOCKS,
+        DAILY_SECONDS,
+        1,
+        UNIBTC_ADDRESS,
+        UNIBTCOT_ADDRESS,
+        UNIBTCVAULT_ADDRESS,
+        false
+      ),
+      unibtcytWeekly: await getYtArray(
+        WEEKLY_LOOPS,
+        WEEKLY_BLOCKS,
+        WEEKLY_SECONDS,
+        7,
+        UNIBTC_ADDRESS,
+        UNIBTCOT_ADDRESS,
+        UNIBTCVAULT_ADDRESS,
+        false
+      )
     }
     const payload = JSON.stringify({ timestamp, data: dataToPost })
     const signature = crypto

@@ -18,6 +18,12 @@ type ChartData = {
   rusdytHourly: any[];
   rusdytDaily: any[];
   rusdytWeekly: any[];
+  rsethytHourly: any[];
+  rsethytDaily: any[];
+  rsethytWeekly: any[];
+  unibtcytHourly: any[];
+  unibtcytDaily: any[];
+  unibtcytWeekly: any[];
 }
 
 let chartData: ChartData = {
@@ -26,7 +32,13 @@ let chartData: ChartData = {
   locksWeekly: [],
   rusdytHourly: [],
   rusdytDaily: [],
-  rusdytWeekly: []
+  rusdytWeekly: [],
+  rsethytHourly: [],
+  rsethytDaily: [],
+  rsethytWeekly: [],
+  unibtcytHourly: [],
+  unibtcytDaily: [],
+  unibtcytWeekly: []
 }
 
 const setData = (data: any): boolean => {
@@ -52,6 +64,28 @@ app.get("/rusdytchartdata", async (req: Request, res: Response) => {
     rusdytHourly: chartData.rusdytHourly,
     rusdytDaily: chartData.rusdytDaily,
     rusdytWeekly: chartData.rusdytWeekly
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/rsethytchartdata", async (req: Request, res: Response) => {
+  console.log('rsethytchartdata api request received')
+
+  const jsonResponse = {
+    rsethytHourly: chartData.rsethytHourly,
+    rsethytDaily: chartData.rsethytDaily,
+    rsethytWeekly: chartData.rsethytWeekly
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/unibtcytchartdata", async (req: Request, res: Response) => {
+  console.log('unibtcytchartdata api request received')
+
+  const jsonResponse = {
+    unibtcytHourly: chartData.unibtcytHourly,
+    unibtcytDaily: chartData.unibtcytDaily,
+    unibtcytWeekly: chartData.unibtcytWeekly
   }
   res.json(jsonResponse)
 })
