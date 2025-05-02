@@ -52,6 +52,12 @@ const UNIBTCVAULT_ADDRESS = '0x8742DB52a4EAEFE88bE5D3431980E221aaAA1EE3'
 const RSETH_ADDRESS = '0x4186BFC76E2E237523CBC30FD220FE055156b41F'
 const RSETHOT_ADDRESS = '0xB1195a6cdB7ef8fB22671bd8321727dBB6DDDe03'
 const RSETHVAULT_ADDRESS = '0xE4dC8142CEd52C547384032e43379b0514341c22'
+const SOLVBTC_ADDRESS = '0xCC0966D8418d412c599A6421b760a847eB169A8c'
+const SOLVBTCOT_ADDRESS = '0xA01cB564ecc3F58a4e2bA5fD59d13a6b998de9b8'
+const SOLVBTCVAULT_ADDRESS = '0xe2f6eF50fD232c7c9698F2f4CaE44A6D80AaFdEE'
+const ORIBGT_ADDRESS = '0x69f1E971257419B1E9C405A553f252c64A29A30a'
+const ORIBGTOT_ADDRESS = '0x978448A7866Aed0146Ad5C5E5d3d8424e2b16356'
+const ORIBGTVAULT_ADDRESS = '0x66090e34c9192Ee9927f44f978246be3e5365D36'
 const DAILY_SECONDS = 86400
 const DAILY_BLOCKS = 28800
 const DAILY_LOOPS = 7
@@ -115,6 +121,73 @@ const getYtArray = async (
       blockNumber: i as unknown as bigint
     })
     const buyingOTPrice = eighteenDecimals ? parseFloat(formatEther(buyingOTQuoteResult[0] as unknown as bigint)) : parseFloat(formatUnits(buyingOTQuoteResult[0] as unknown as bigint, 8))
+    const timeDifference = parseFloat(endTimeResult) * 1000 - Date.now()
+    const fixedDaysDifference = timeDifference / (1000 * 60 * 60 * 24)
+    const daysTil = parseFloat(fixedDaysDifference.toFixed(2)) + j
+    const fixedAprResponse = (1 - buyingOTPrice) * 100 * (365 / daysTil)
+    const ytPrice = 1 - buyingOTPrice
+
+    const ytTempEntry = {
+      timestamp: incTimestamp,
+      block: i,
+      daysTil: daysTil,
+      ytPrice: ytPrice,
+      fixedApr: fixedAprResponse
+    }
+    ytTempArray.push(ytTempEntry)
+    console.log(ytTempEntry)
+
+    incTimestamp -= seconds
+    j += daysTilInc
+    await sleepPlz()
+  }
+
+  console.log(ytTempArray)
+  return ytTempArray
+}
+
+const getSolvbtcYtArray = async (
+  loops: number,
+  blocks: number,
+  seconds: number,
+  daysTilInc: number,
+  dtAddy: string,
+  otAddy: string,
+  vaultAddy: string
+): Promise<any> => {
+  const client = getPublicClient(config)
+  const blockResult: any = await client.getBlock()
+  const currentBlock = parseFloat(blockResult.number)
+  const currentTimestamp = parseFloat(blockResult.timestamp)
+  console.log('block:', currentBlock, "timestamp:", currentTimestamp)
+
+  const ytTempArray: any[] = []
+  let incTimestamp = currentTimestamp
+  let j = 0
+  for(let i = currentBlock; i > (currentBlock - (loops * blocks)); i -= blocks) {
+    const buyingOTQuoteResult: any = await readContract(config, {
+      address: QUOTER_ADDRESS,
+      abi: quoterABI.abi,
+      functionName: "quoteExactOutputSingle",
+      args: [
+        [
+          dtAddy,
+          otAddy,
+          parseEther(`0.0001`),
+          500,
+          0
+        ]
+      ],
+      blockNumber: i as unknown as bigint
+    })
+    const endTimeResult: any = await readContract(config, {
+      address: vaultAddy as `0x${string}`,
+      abi: vaultABI.abi,
+      functionName: "endTime",
+      args: [],
+      blockNumber: i as unknown as bigint
+    })
+    const buyingOTPrice = parseFloat(formatEther(buyingOTQuoteResult[0] as unknown as bigint)) * 10000
     const timeDifference = parseFloat(endTimeResult) * 1000 - Date.now()
     const fixedDaysDifference = timeDifference / (1000 * 60 * 60 * 24)
     const daysTil = parseFloat(fixedDaysDifference.toFixed(2)) + j
@@ -293,7 +366,64 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
         UNIBTCOT_ADDRESS,
         UNIBTCVAULT_ADDRESS,
         false
-      )
+      ),
+      solvbtcytHourly: await getSolvbtcYtArray(
+        HOURLY_LOOPS,
+        HOURLY_BLOCKS,
+        HOURLY_SECONDS,
+        1/24,
+        SOLVBTC_ADDRESS,
+        SOLVBTCOT_ADDRESS,
+        SOLVBTCVAULT_ADDRESS
+      ),
+      solvbtcytDaily: await getSolvbtcYtArray(
+        DAILY_LOOPS,
+        DAILY_BLOCKS,
+        DAILY_SECONDS,
+        1,
+        SOLVBTC_ADDRESS,
+        SOLVBTCOT_ADDRESS,
+        SOLVBTCVAULT_ADDRESS
+      ),
+      solvbtcytWeekly: await getSolvbtcYtArray(
+        WEEKLY_LOOPS,
+        WEEKLY_BLOCKS,
+        WEEKLY_SECONDS,
+        7,
+        SOLVBTC_ADDRESS,
+        SOLVBTCOT_ADDRESS,
+        SOLVBTCVAULT_ADDRESS
+      ),
+      oribgtytHourly: await getYtArray(
+        HOURLY_LOOPS,
+        HOURLY_BLOCKS,
+        HOURLY_SECONDS,
+        1/24,
+        ORIBGT_ADDRESS,
+        ORIBGTOT_ADDRESS,
+        ORIBGTVAULT_ADDRESS,
+        true
+      ),
+      oribgtytDaily: await getYtArray(
+        DAILY_LOOPS,
+        DAILY_BLOCKS,
+        DAILY_SECONDS,
+        1,
+        ORIBGT_ADDRESS,
+        ORIBGTOT_ADDRESS,
+        ORIBGTVAULT_ADDRESS,
+        true
+      ),
+      // oribgtytWeekly: await getYtArray(
+      //   WEEKLY_LOOPS,
+      //   WEEKLY_BLOCKS,
+      //   WEEKLY_SECONDS,
+      //   7,
+      //   ORIBGT_ADDRESS,
+      //   ORIBGTOT_ADDRESS,
+      //   ORIBGTVAULT_ADDRESS,
+      //   true
+      // ),
     }
     const payload = JSON.stringify({ timestamp, data: dataToPost })
     const signature = crypto

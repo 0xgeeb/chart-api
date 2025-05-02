@@ -24,6 +24,12 @@ type ChartData = {
   unibtcytHourly: any[];
   unibtcytDaily: any[];
   unibtcytWeekly: any[];
+  solvbtcytHourly: any[];
+  solvbtcytDaily: any[];
+  solvbtcytWeekly: any[];
+  oribgtytHourly: any[];
+  oribgtytDaily: any[];
+  // oribgtytWeekly: any[];
 }
 
 let chartData: ChartData = {
@@ -38,7 +44,13 @@ let chartData: ChartData = {
   rsethytWeekly: [],
   unibtcytHourly: [],
   unibtcytDaily: [],
-  unibtcytWeekly: []
+  unibtcytWeekly: [],
+  solvbtcytHourly: [],
+  solvbtcytDaily: [],
+  solvbtcytWeekly: [],
+  oribgtytHourly: [],
+  oribgtytDaily: [],
+  // oribgtytWeekly: [],
 }
 
 const setData = (data: any): boolean => {
@@ -86,6 +98,28 @@ app.get("/unibtcytchartdata", async (req: Request, res: Response) => {
     unibtcytHourly: chartData.unibtcytHourly,
     unibtcytDaily: chartData.unibtcytDaily,
     unibtcytWeekly: chartData.unibtcytWeekly
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/solvbtcytchartdata", async (req: Request, res: Response) => {
+  console.log('solvbtcytchartdata api request received')
+  
+  const jsonResponse = {
+    solvbtcytHourly: chartData.solvbtcytHourly,
+    solvbtcytDaily: chartData.solvbtcytDaily,
+    solvbtcytWeekly: chartData.solvbtcytWeekly
+  }
+  res.json(jsonResponse)
+})
+
+app.get("/oribgtytchartdata", async (req: Request, res: Response) => {
+  console.log("oribgtytchartdata api request received")
+
+  const jsonResponse = {
+    oribgtytHourly: chartData.oribgtytHourly,
+    oribgtytDaily: chartData.oribgtytDaily,
+    // oribgtytWeekly: chartData.oribgtytWeekly
   }
   res.json(jsonResponse)
 })
