@@ -337,63 +337,69 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
         RSETHVAULT_ADDRESS,
         true
       ),
-      unibtcytHourly: await getYtArray(
-        HOURLY_LOOPS,
-        HOURLY_BLOCKS,
-        HOURLY_SECONDS,
-        1/24,
-        UNIBTC_ADDRESS,
-        UNIBTCOT_ADDRESS,
-        UNIBTCVAULT_ADDRESS,
-        false
-      ),
-      unibtcytDaily: await getYtArray(
-        DAILY_LOOPS,
-        DAILY_BLOCKS,
-        DAILY_SECONDS,
-        1,
-        UNIBTC_ADDRESS,
-        UNIBTCOT_ADDRESS,
-        UNIBTCVAULT_ADDRESS,
-        false
-      ),
-      unibtcytWeekly: await getYtArray(
-        WEEKLY_LOOPS,
-        WEEKLY_BLOCKS,
-        WEEKLY_SECONDS,
-        7,
-        UNIBTC_ADDRESS,
-        UNIBTCOT_ADDRESS,
-        UNIBTCVAULT_ADDRESS,
-        false
-      ),
-      solvbtcytHourly: await getSolvbtcYtArray(
-        HOURLY_LOOPS,
-        HOURLY_BLOCKS,
-        HOURLY_SECONDS,
-        1/24,
-        SOLVBTC_ADDRESS,
-        SOLVBTCOT_ADDRESS,
-        SOLVBTCVAULT_ADDRESS
-      ),
-      solvbtcytDaily: await getSolvbtcYtArray(
-        DAILY_LOOPS,
-        DAILY_BLOCKS,
-        DAILY_SECONDS,
-        1,
-        SOLVBTC_ADDRESS,
-        SOLVBTCOT_ADDRESS,
-        SOLVBTCVAULT_ADDRESS
-      ),
-      solvbtcytWeekly: await getSolvbtcYtArray(
-        WEEKLY_LOOPS,
-        WEEKLY_BLOCKS,
-        WEEKLY_SECONDS,
-        7,
-        SOLVBTC_ADDRESS,
-        SOLVBTCOT_ADDRESS,
-        SOLVBTCVAULT_ADDRESS
-      ),
+      unibtcHourly: [],
+      unibtcDaily: [],
+      unibtcWeekly: [],
+      // unibtcytHourly: await getYtArray(
+      //   HOURLY_LOOPS,
+      //   HOURLY_BLOCKS,
+      //   HOURLY_SECONDS,
+      //   1/24,
+      //   UNIBTC_ADDRESS,
+      //   UNIBTCOT_ADDRESS,
+      //   UNIBTCVAULT_ADDRESS,
+      //   false
+      // ),
+      // unibtcytDaily: await getYtArray(
+      //   DAILY_LOOPS,
+      //   DAILY_BLOCKS,
+      //   DAILY_SECONDS,
+      //   1,
+      //   UNIBTC_ADDRESS,
+      //   UNIBTCOT_ADDRESS,
+      //   UNIBTCVAULT_ADDRESS,
+      //   false
+      // ),
+      // unibtcytWeekly: await getYtArray(
+      //   WEEKLY_LOOPS,
+      //   WEEKLY_BLOCKS,
+      //   WEEKLY_SECONDS,
+      //   7,
+      //   UNIBTC_ADDRESS,
+      //   UNIBTCOT_ADDRESS,
+      //   UNIBTCVAULT_ADDRESS,
+      //   false
+      // ),
+      solvbtcHourly: [],
+      solvbtcDaily: [],
+      solvbtcWeekly: [],
+      // solvbtcytHourly: await getSolvbtcYtArray(
+      //   HOURLY_LOOPS,
+      //   HOURLY_BLOCKS,
+      //   HOURLY_SECONDS,
+      //   1/24,
+      //   SOLVBTC_ADDRESS,
+      //   SOLVBTCOT_ADDRESS,
+      //   SOLVBTCVAULT_ADDRESS
+      // ),
+      // solvbtcytDaily: await getSolvbtcYtArray(
+      //   DAILY_LOOPS,
+      //   DAILY_BLOCKS,
+      //   DAILY_SECONDS,
+      //   1,
+      //   SOLVBTC_ADDRESS,
+      //   SOLVBTCOT_ADDRESS,
+      //   SOLVBTCVAULT_ADDRESS
+      // ),
+      // solvbtcytWeekly: await getSolvbtcYtArray(
+      //   WEEKLY_LOOPS,
+      //   WEEKLY_BLOCKS,
+      //   WEEKLY_SECONDS,
+      //   7,
+      //   SOLVBTC_ADDRESS,
+      //   SOLVBTCOT_ADDRESS,
+      //   SOLVBTCVAULT_ADDRESS
+      // ),
       oribgtytHourly: await getYtArray(
         HOURLY_LOOPS,
         HOURLY_BLOCKS,
