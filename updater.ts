@@ -8,6 +8,7 @@ import { getPublicClient, readContract } from "@wagmi/core"
 import goldiswapABI from './abis/Goldiswap.json'
 import quoterABI from './abis/QuoterV2.json'
 import vaultABI from './abis/Goldivault4626.json'
+import oribgtABI from "./abis/oriBGT.json"
 
 dotenv.config()
 const PASSWORD = process.env.PASSWORD
@@ -78,6 +79,8 @@ const marketPrice = (fsl: number, psl: number, supply: number): number => {
   return floorPrice(fsl, supply) + (psl / supply) * ((psl + fsl) / fsl) ** 6
 }
 
+// THIS CONVERTS TO ASSETS AND ONLY WORKS FOR 4626 VAULTS
+// copy and create another function without convertToAssets in it for normal vault
 const getYtArray = async (
   loops: number,
   blocks: number,
@@ -124,81 +127,21 @@ const getYtArray = async (
     const timeDifference = parseFloat(endTimeResult) * 1000 - Date.now()
     const fixedDaysDifference = timeDifference / (1000 * 60 * 60 * 24)
     const daysTil = parseFloat(fixedDaysDifference.toFixed(2)) + j
-    const fixedAprResponse = (1 - buyingOTPrice) * 100 * (365 / daysTil)
-    const ytPrice = 1 - buyingOTPrice
+    const convertedQuote = await readContract(config, {
+      address: ORIBGT_ADDRESS as `0x${string}`,
+      abi: oribgtABI.abi,
+      functionName: 'convertToAssets',
+      args: [parseEther(`${buyingOTPrice}`)],
+      blockNumber: i as unknown as bigint
+    })
+    const currentYtPrice = 1 - parseFloat(formatEther(convertedQuote as unknown as bigint))
+    const fixedAprResponse = currentYtPrice * 100 * (365 / daysTil)
 
     const ytTempEntry = {
       timestamp: incTimestamp,
       block: i,
       daysTil: daysTil,
-      ytPrice: ytPrice,
-      fixedApr: fixedAprResponse
-    }
-    ytTempArray.push(ytTempEntry)
-    console.log(ytTempEntry)
-
-    incTimestamp -= seconds
-    j += daysTilInc
-    await sleepPlz()
-  }
-
-  console.log(ytTempArray)
-  return ytTempArray
-}
-
-const getSolvbtcYtArray = async (
-  loops: number,
-  blocks: number,
-  seconds: number,
-  daysTilInc: number,
-  dtAddy: string,
-  otAddy: string,
-  vaultAddy: string
-): Promise<any> => {
-  const client = getPublicClient(config)
-  const blockResult: any = await client.getBlock()
-  const currentBlock = parseFloat(blockResult.number)
-  const currentTimestamp = parseFloat(blockResult.timestamp)
-  console.log('block:', currentBlock, "timestamp:", currentTimestamp)
-
-  const ytTempArray: any[] = []
-  let incTimestamp = currentTimestamp
-  let j = 0
-  for(let i = currentBlock; i > (currentBlock - (loops * blocks)); i -= blocks) {
-    const buyingOTQuoteResult: any = await readContract(config, {
-      address: QUOTER_ADDRESS,
-      abi: quoterABI.abi,
-      functionName: "quoteExactOutputSingle",
-      args: [
-        [
-          dtAddy,
-          otAddy,
-          parseEther(`0.0001`),
-          500,
-          0
-        ]
-      ],
-      blockNumber: i as unknown as bigint
-    })
-    const endTimeResult: any = await readContract(config, {
-      address: vaultAddy as `0x${string}`,
-      abi: vaultABI.abi,
-      functionName: "endTime",
-      args: [],
-      blockNumber: i as unknown as bigint
-    })
-    const buyingOTPrice = parseFloat(formatEther(buyingOTQuoteResult[0] as unknown as bigint)) * 10000
-    const timeDifference = parseFloat(endTimeResult) * 1000 - Date.now()
-    const fixedDaysDifference = timeDifference / (1000 * 60 * 60 * 24)
-    const daysTil = parseFloat(fixedDaysDifference.toFixed(2)) + j
-    const fixedAprResponse = (1 - buyingOTPrice) * 100 * (365 / daysTil)
-    const ytPrice = 1 - buyingOTPrice
-
-    const ytTempEntry = {
-      timestamp: incTimestamp,
-      block: i,
-      daysTil: daysTil,
-      ytPrice: ytPrice,
+      ytPrice: currentYtPrice,
       fixedApr: fixedAprResponse
     }
     ytTempArray.push(ytTempEntry)
@@ -277,129 +220,18 @@ const job = new CronJob('0 */5 * * * *', async () => { // Every 5 minutes
       locksHourly: await getLocksArray(HOURLY_LOOPS, HOURLY_BLOCKS, HOURLY_SECONDS),
       locksDaily: await getLocksArray(DAILY_LOOPS, DAILY_BLOCKS, DAILY_SECONDS),
       locksWeekly: await getLocksArray(WEEKLY_LOOPS, WEEKLY_BLOCKS, WEEKLY_SECONDS),
-      rusdytHourly: await getYtArray(
-        HOURLY_LOOPS,
-        HOURLY_BLOCKS,
-        HOURLY_SECONDS,
-        1/24,
-        RUSD_ADDRESS,
-        RUSDOT_ADDRESS,
-        RUSDVAULT_ADDRESS,
-        true
-      ),
-      rusdytDaily: await getYtArray(
-        DAILY_LOOPS,
-        DAILY_BLOCKS,
-        DAILY_SECONDS,
-        1,
-        RUSD_ADDRESS,
-        RUSDOT_ADDRESS,
-        RUSDVAULT_ADDRESS,
-        true
-      ),
-      rusdytWeekly: await getYtArray(
-        WEEKLY_LOOPS,
-        WEEKLY_BLOCKS,
-        WEEKLY_SECONDS,
-        7,
-        RUSD_ADDRESS,
-        RUSDOT_ADDRESS,
-        RUSDVAULT_ADDRESS,
-        true
-      ),
-      rsethytHourly: await getYtArray(
-        HOURLY_LOOPS,
-        HOURLY_BLOCKS,
-        HOURLY_SECONDS,
-        1/24,
-        RSETH_ADDRESS,
-        RSETHOT_ADDRESS,
-        RSETHVAULT_ADDRESS,
-        true
-      ),
-      rsethytDaily: await getYtArray(
-        DAILY_LOOPS,
-        DAILY_BLOCKS,
-        DAILY_SECONDS,
-        1,
-        RSETH_ADDRESS,
-        RSETHOT_ADDRESS,
-        RSETHVAULT_ADDRESS,
-        true
-      ),
-      rsethytWeekly: await getYtArray(
-        WEEKLY_LOOPS,
-        WEEKLY_BLOCKS,
-        WEEKLY_SECONDS,
-        7,
-        RSETH_ADDRESS,
-        RSETHOT_ADDRESS,
-        RSETHVAULT_ADDRESS,
-        true
-      ),
-      unibtcHourly: [],
-      unibtcDaily: [],
-      unibtcWeekly: [],
-      // unibtcytHourly: await getYtArray(
-      //   HOURLY_LOOPS,
-      //   HOURLY_BLOCKS,
-      //   HOURLY_SECONDS,
-      //   1/24,
-      //   UNIBTC_ADDRESS,
-      //   UNIBTCOT_ADDRESS,
-      //   UNIBTCVAULT_ADDRESS,
-      //   false
-      // ),
-      // unibtcytDaily: await getYtArray(
-      //   DAILY_LOOPS,
-      //   DAILY_BLOCKS,
-      //   DAILY_SECONDS,
-      //   1,
-      //   UNIBTC_ADDRESS,
-      //   UNIBTCOT_ADDRESS,
-      //   UNIBTCVAULT_ADDRESS,
-      //   false
-      // ),
-      // unibtcytWeekly: await getYtArray(
-      //   WEEKLY_LOOPS,
-      //   WEEKLY_BLOCKS,
-      //   WEEKLY_SECONDS,
-      //   7,
-      //   UNIBTC_ADDRESS,
-      //   UNIBTCOT_ADDRESS,
-      //   UNIBTCVAULT_ADDRESS,
-      //   false
-      // ),
-      solvbtcHourly: [],
-      solvbtcDaily: [],
-      solvbtcWeekly: [],
-      // solvbtcytHourly: await getSolvbtcYtArray(
-      //   HOURLY_LOOPS,
-      //   HOURLY_BLOCKS,
-      //   HOURLY_SECONDS,
-      //   1/24,
-      //   SOLVBTC_ADDRESS,
-      //   SOLVBTCOT_ADDRESS,
-      //   SOLVBTCVAULT_ADDRESS
-      // ),
-      // solvbtcytDaily: await getSolvbtcYtArray(
-      //   DAILY_LOOPS,
-      //   DAILY_BLOCKS,
-      //   DAILY_SECONDS,
-      //   1,
-      //   SOLVBTC_ADDRESS,
-      //   SOLVBTCOT_ADDRESS,
-      //   SOLVBTCVAULT_ADDRESS
-      // ),
-      // solvbtcytWeekly: await getSolvbtcYtArray(
-      //   WEEKLY_LOOPS,
-      //   WEEKLY_BLOCKS,
-      //   WEEKLY_SECONDS,
-      //   7,
-      //   SOLVBTC_ADDRESS,
-      //   SOLVBTCOT_ADDRESS,
-      //   SOLVBTCVAULT_ADDRESS
-      // ),
+      rusdytHourly: [],
+      rusdytDaily: [],
+      rusdytWeekly: [],
+      rsethytHourly: [],
+      rsethytDaily: [],
+      rsethytWeekly: [],
+      unibtcytHourly: [],
+      unibtcytDaily: [],
+      unibtcytWeekly: [],
+      solvbtcytHourly: [],
+      solvbtcytDaily: [],
+      solvbtcytWeekly: [],
       oribgtytHourly: await getYtArray(
         HOURLY_LOOPS,
         HOURLY_BLOCKS,
